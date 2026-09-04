@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars,@typescript-eslint/ban-ts-comment */
 // noinspection JSUnusedLocalSymbols
 
-import { describe, it } from "vitest";
+import { describe, it, type MockedObject } from "vitest";
 
 import {
   defineProviders,
@@ -389,6 +389,20 @@ describe("Type-safety", () => {
 
       container.bindAll(readonlyProviders);
       container.bindAll(...readonlyProviders);
+    });
+
+    it("bindAll() stays within the instantiation depth limit", () => {
+      // A mapped type over Container has to reproduce the signature of bindAll(), which means
+      // instantiating ProviderList with a type parameter that is not resolved yet. TypeScript
+      // then cannot tell whether an element is a nested array, so an unbounded recursion between
+      // CheckProviderNode and CheckedProviderList keeps expanding both branches until the checker
+      // gives up with "Type instantiation is excessively deep and possibly infinite".
+      //
+      // This is what mocking libraries produce, so it is easy to run into. It is also nastier
+      // than a single error: once TypeScript bails out, it silently stops reporting type errors
+      // in other files too, which quietly disables the checks asserted above.
+      const mock = null as unknown as MockedObject<Container> & { resetAll: () => void };
+      const mockedContainer: MockedObject<Container> = mock;
     });
   });
   it("Injection tokens", () => {
