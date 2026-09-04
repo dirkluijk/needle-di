@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/needle-di/needle-di/compare/v1.2.0...v1.2.1) (2026-09-04)
+
+
+### Bug Fixes
+
+* **providers:** bound the nesting depth that ProviderList type-checks ([#124](https://github.com/needle-di/needle-di/issues/124)) ([ce83bbb](https://github.com/needle-di/needle-di/commit/ce83bbb1f67ff2f7be5a0d73e4e9f1a360c1ef62))
+
 ## [1.2.0](https://github.com/needle-di/needle-di/compare/v1.1.3...v1.2.0) (2026-08-17)
 
 
