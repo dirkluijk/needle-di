@@ -150,23 +150,41 @@ type ProviderKey = KeysOfUnion<ObjectProvider<unknown>>;
 type NoExcessProperties<T> = Record<Exclude<keyof T, ProviderKey>, never>;
 
 /**
+ * How many levels of nesting {@link CheckedProviderList} descends into, expressed as the
+ * remaining budget.
+ *
+ * The recursion between {@link CheckProviderNode} and {@link CheckedProviderList} is otherwise
+ * unbounded. For a concrete argument list that is harmless, since the nesting runs out. But for a
+ * type parameter that is not resolved yet, TypeScript cannot tell whether an element is a nested
+ * array, so it keeps expanding both branches. That happens as soon as `Container` takes part in a
+ * structural comparison, for example when a mapped type over it is checked against another, and it
+ * makes the checker give up with "Type instantiation is excessively deep and possibly infinite".
+ *
+ * Four levels covers any realistic provider list. Deeper elements degrade to `Provider<unknown>`,
+ * which still accepts every valid provider, but no longer correlates a token with its value type.
+ */
+type NestingBudget = [unknown, unknown, unknown, unknown];
+
+/**
  * Type-checks a single element: either a nested array, or a provider whose value type
  * is correlated with the token it is provided for.
  */
-type CheckProviderNode<T> = T extends readonly unknown[]
-  ? CheckedProviderList<T>
-  : T extends { provide: Token<infer U> }
-    ? // only intersect when there is something to reject, to keep error messages readable
-      Exclude<keyof T, ProviderKey> extends never
-      ? Provider<U>
-      : Provider<U> & NoExcessProperties<T>
-    : Provider<unknown>;
+type CheckProviderNode<T, Budget extends readonly unknown[]> = Budget extends readonly [unknown, ...infer Rest]
+  ? T extends readonly unknown[]
+    ? CheckedProviderList<T, Rest>
+    : T extends { provide: Token<infer U> }
+      ? // only intersect when there is something to reject, to keep error messages readable
+        Exclude<keyof T, ProviderKey> extends never
+        ? Provider<U>
+        : Provider<U> & NoExcessProperties<T>
+      : Provider<unknown>
+  : Provider<unknown>;
 
 /**
  * Type-checks every element of an (arbitrarily nested) list of providers.
  */
-type CheckedProviderList<T extends readonly unknown[]> = {
-  [K in keyof T]: CheckProviderNode<T[K]>;
+type CheckedProviderList<T extends readonly unknown[], Budget extends readonly unknown[] = NestingBudget> = {
+  [K in keyof T]: CheckProviderNode<T[K], Budget>;
 };
 
 /**
